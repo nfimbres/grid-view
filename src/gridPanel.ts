@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { getWebviewContent } from './renderer';
+import { buildTableFromText } from './utils/lineParser';
 
 let currentDoc: vscode.TextDocument;
+let panel: vscode.WebviewPanel;
 
 export async function openGridPanel(context: vscode.ExtensionContext) {
   const uris = await vscode.window.showOpenDialog({ canSelectMany: false });
@@ -17,7 +19,7 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
 
   const lines = currentDoc.getText().split(/\r?\n/);
 
-  const panel = vscode.window.createWebviewPanel(
+  panel = vscode.window.createWebviewPanel(
     'gridSecondPanel',
     'Code Grid',
     vscode.ViewColumn.Two,
@@ -46,4 +48,14 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
       await currentDoc.save();
     }
   });
+}
+
+export function updateGridFromFile(newText: string) {
+  const newTableHTML = buildTableFromText(newText);
+  if (panel) {
+    panel.webview.postMessage({
+      command: 'refreshGrid',
+      html: newTableHTML
+    });
+  }
 }

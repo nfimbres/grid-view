@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "grid-view.openSplitView",
-        "title": "Open Split View"
+        "title": "Grid Extension"
       }
     ]
 },
