@@ -49,3 +49,8 @@ export function buildTableRows(lines: string[], maxCols = 5): string {
     return `<tr>${cells.join('')}</tr>`;
   }).join('\n');
 }
+
+export function buildTableFromText(text: string): string {
+  const lines = text.split(/\r?\n/);
+  return buildTableRows(lines);
+}

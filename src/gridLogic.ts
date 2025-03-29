@@ -184,6 +184,13 @@ export function getGridScript(): string {
         if (!cell.dataset || cell.classList.contains('line-number')) return;
         if (cell.dataset.edit === 'true') enterEditMode(cell);
       });
+
+      window.addEventListener('message', event => {
+        const message = event.data;
+        if (message.command === 'refreshGrid') {
+        const gridBody = document.getElementById('grid-body');
+        if (gridBody) gridBody.innerHTML = message.html;}
+      });
     `;
   }
   

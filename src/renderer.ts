@@ -49,7 +49,7 @@ export function getWebviewContent(lines: string[]): string {
       </style>
     </head>
     <body>
-            <table id="grid">${tableRows}</table>
+            <table id="grid"><tbody id="grid-body">${tableRows}</tbody></table>
 
       <div id="controls" style="justify-content: center; padding: 10px;">
         <h3>Keyboard Controls</h3>
