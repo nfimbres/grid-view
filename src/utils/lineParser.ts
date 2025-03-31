@@ -40,6 +40,7 @@ export function buildTableRows(lines: string[], maxCols = 5): string {
         if (kw === 'def') className = 'blue';
         else if (kw === 'if') className = 'yellow';
         else if (kw === 'for') className = 'green';
+        else if (kw === 'while') className = 'red';
       }
 
       // Clean, plain empty cells otherwise

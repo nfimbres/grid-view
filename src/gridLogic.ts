@@ -38,6 +38,7 @@ export function getGridScript(): string {
             if (text.includes('def')) return 'def';
             if (text.includes('if')) return 'if';
             if (text.includes('for')) return 'for';
+            if (text.includes('while')) return 'while';
           }
         }
         return null;
@@ -77,7 +78,7 @@ export function getGridScript(): string {
   
         const context = findParentKeyword(row);
         cell.innerHTML = context ? \`↳within <em>\${context}</em>\` : '';
-        cell.className = context === 'def' ? 'blue' : context === 'if' ? 'yellow' : context === 'for' ? 'green' : '';
+        cell.className = context === 'def' ? 'blue' : context === 'if' ? 'yellow' : context === 'for' ? 'green' : context === 'while' ? 'red' : '';
         cell.dataset.edit = 'false';
         cell.contentEditable = 'false';
       }

@@ -24,7 +24,10 @@ export function getWebviewContent(lines: string[]): string {
           width: 100%;
         }
         td {
-          border: 1px solid #444;
+          border-right: 1px solid white;
+          border-left: 1px solid #444;
+          border-bottom: 1px solid #444;
+          border-top: 1px solid #444;
           padding: 4px;
           min-width: 80px;
           white-space: pre;
@@ -35,11 +38,12 @@ export function getWebviewContent(lines: string[]): string {
           min-width: 20px;
           width: 20px;
           text-align: right;
-          color: gray;
+          color: white;
         }
         .yellow { background-color: #ffff00; color: black; }
         .blue { background-color: #3399ff; color: black; }
         .green { background-color: #00ff00; color: black; }
+        .red { background-color:rgb(255, 0, 0); color: black; }
         td:focus {
           outline: 1px solid #00ffff;
         }
