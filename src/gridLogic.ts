@@ -28,6 +28,8 @@ export function getGridScript(): string {
         isEditing = false;
         cell.contentEditable = 'false';
         cell.focus();
+
+        validateGridContent();
       }
   
       function findParentKeyword(row) {
@@ -57,6 +59,45 @@ export function getGridScript(): string {
         return max;
       }
   
+      function validateGridContent() {
+        const rows = Array.from(grid.querySelectorAll('tr'));
+        const warnings = [];
+      
+        rows.forEach((tr, rowIndex) => {
+          const cells = Array.from(tr.querySelectorAll('td')).filter(c => c.dataset && c.dataset.col);
+          const codeCell = cells.find(c => c.dataset.edit === 'true');
+          if (!codeCell) {
+            tr.classList.remove('problem-row'); // Remove the class if no code cell exists
+            return;
+          }
+      
+          const code = codeCell.textContent.trim();
+          if (code.startsWith('for') || code.startsWith('while')) {
+            const nextRow = rows[rowIndex + 1];
+            if (!nextRow) {
+              warnings.push(\`Line \${rowIndex + 1}: Loop has no body.\`);
+              tr.classList.add('problem-row'); // Highlight the problematic row
+              return;
+            }
+      
+            const nextCells = Array.from(nextRow.querySelectorAll('td')).filter(c => c.dataset && c.dataset.col);
+            const nextCodeCell = nextCells.find(c => c.dataset.edit === 'true');
+            if (!nextCodeCell || parseInt(nextCodeCell.dataset.col) <= parseInt(codeCell.dataset.col)) {
+              warnings.push(\`Line \${rowIndex + 1}: Loop has no body.\`);
+              tr.classList.add('problem-row'); // Highlight the problematic row
+            } else {
+              tr.classList.remove('problem-row'); // Remove the class if the issue is resolved
+            }
+          } else {
+            tr.classList.remove('problem-row'); // Remove the class if the row is not a loop
+          }
+        });
+      
+        if (warnings.length > 0) {
+          vscode.postMessage({ command: 'showWarnings', warnings });
+        }
+      }
+
       function shiftCellRight(cell) {
         if (cell.dataset.edit !== 'true') return;
   
@@ -81,6 +122,8 @@ export function getGridScript(): string {
         cell.className = context === 'def' ? 'blue' : context === 'if' ? 'yellow' : context === 'for' ? 'green' : context === 'while' ? 'red' : '';
         cell.dataset.edit = 'false';
         cell.contentEditable = 'false';
+
+        validateGridContent();
       }
   
       function shiftCellLeft(cell) {
@@ -107,6 +150,8 @@ export function getGridScript(): string {
         cell.className = '';
         cell.dataset.edit = 'false';
         cell.contentEditable = 'false';
+        
+        validateGridContent();
       }
   
       function saveGridToVSCode() {
@@ -127,6 +172,7 @@ export function getGridScript(): string {
         });
   
         vscode.postMessage({ command: 'save', lines: result });
+        validateGridContent(); // Trigger validation after saving
       }
   
       grid.addEventListener('keydown', (e) => {
@@ -188,10 +234,25 @@ export function getGridScript(): string {
 
       window.addEventListener('message', event => {
         const message = event.data;
+        
         if (message.command === 'refreshGrid') {
-        const gridBody = document.getElementById('grid-body');
-        if (gridBody) gridBody.innerHTML = message.html;}
+          const gridBody = document.getElementById('grid-body');
+          if (gridBody) gridBody.innerHTML = message.html;
+        }
+
+        if (message.command === 'saveComplete') {
+          validateGridContent();
+
+          // Restore focus to last focused cell if needed
+          const active = document.activeElement;
+          if (active && active.dataset && active.dataset.row && active.dataset.col) {
+            active.focus();
+          }
+        }
+
+        if (message.command === 'validateGridContent') {
+          validateGridContent();
+        }
       });
     `;
   }
-  
