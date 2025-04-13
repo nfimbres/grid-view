@@ -183,12 +183,6 @@ export function getGridScript(): string {
         const col = parseInt(cell.dataset.col);
         let next;
   
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-          e.preventDefault();
-          saveGridToVSCode();
-          return;
-        }
-  
         if (e.key === 'Enter') {
           e.preventDefault();
           if (e.shiftKey) {
@@ -198,7 +192,7 @@ export function getGridScript(): string {
       
             for (let i = 0; i < totalCols; i++) {
               const newCell = document.createElement('td');
-              newCell.setAttribute('data-row', row+1);
+              newCell.setAttribute('data-row', row + 1);
               newCell.setAttribute('data-col', i);
               newCell.setAttribute('tabindex', '0');
               newCell.setAttribute('data-edit', 'false');
@@ -220,24 +214,27 @@ export function getGridScript(): string {
             });
       
             validateGridContent();
+            saveGridToVSCode(); // Always save after handling Shift+Enter
           } else if (isEditing) {
             exitEditMode(cell);
+            saveGridToVSCode(); // Save only when exiting edit mode
           } else if (cell.dataset.edit === 'true') {
             enterEditMode(cell);
           }
-            
           return;
         }
   
         if (!isEditing && e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
           shiftCellRight(cell);
+          saveGridToVSCode(); // Save after handling Tab
           return;
         }
   
         if (!isEditing && e.key === 'Tab' && e.shiftKey) {
           e.preventDefault();
           shiftCellLeft(cell);
+          saveGridToVSCode(); // Save after handling Shift+Tab
           return;
         }
   
