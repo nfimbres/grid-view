@@ -46,6 +46,9 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
       edit.replace(currentDoc.uri, fullRange, newContent);
       await vscode.workspace.applyEdit(edit);
       await currentDoc.save();
+    
+      // 👇 Notify the webview that save is done
+      panel.webview.postMessage({ command: 'saveComplete' });
     }
   });
 }

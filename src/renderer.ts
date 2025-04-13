@@ -24,7 +24,10 @@ export function getWebviewContent(lines: string[]): string {
           width: 100%;
         }
         td {
-          border: 1px solid #444;
+          border-right: 1px solid white;
+          border-left: 1px solid #444;
+          border-bottom: 1px solid #444;
+          border-top: 1px solid #444;
           padding: 4px;
           min-width: 80px;
           white-space: pre;
@@ -35,11 +38,19 @@ export function getWebviewContent(lines: string[]): string {
           min-width: 20px;
           width: 20px;
           text-align: right;
-          color: gray;
+          color: white;
+          background: black !important; /* Exclude line number column from highlighting */
         }
-        .yellow { background-color: #ffff00; color: black; }
-        .blue { background-color: #3399ff; color: black; }
-        .green { background-color: #00ff00; color: black; }
+        .yellow { background-color: rgb(240, 228, 66); color: rgb(60, 57, 17); }
+        .blue { background-color: rgb(0, 114, 178); color: rgb(191, 220, 228); }
+        .green { background-color: rgb(0, 158, 115); color: rgb(191, 231, 220); }
+        .red { background-color: rgb(213, 94, 0); color: rgb(245, 215, 191); }
+        .problem-row td {
+          background-color: red !important; /* Highlight problematic rows */
+        }
+        .problem-row .line-number {
+          background: rgb(255, 0, 0) !important;
+        }
         td:focus {
           outline: 1px solid #00ffff;
         }
@@ -49,7 +60,7 @@ export function getWebviewContent(lines: string[]): string {
       </style>
     </head>
     <body>
-            <table id="grid"><tbody id="grid-body">${tableRows}</tbody></table>
+      <table id="grid"><tbody id="grid-body">${tableRows}</tbody></table>
 
       <div id="controls" style="justify-content: center; padding: 10px;">
         <h3>Keyboard Controls</h3>
@@ -63,9 +74,21 @@ export function getWebviewContent(lines: string[]): string {
       </div>
 
       <script>${script}</script>
-
+      <script>
+        window.addEventListener('message', event => {
+          const message = event.data;
+          if (message.command === 'updateGrid') {
+            const gridBody = document.getElementById('grid-body');
+            if (gridBody) {
+              gridBody.innerHTML = message.html;
+              validateGridContent(); // Reapply validation after grid update
+            }
+          } else if (message.command === 'validateGridContent') {
+            validateGridContent(); // Trigger validation explicitly
+          }
+        });
+      </script>
     </body>
     </html>
   `;
-  
 }
