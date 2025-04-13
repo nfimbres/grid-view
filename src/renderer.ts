@@ -65,11 +65,11 @@ export function getWebviewContent(lines: string[]): string {
       <div id="controls" style="justify-content: center; padding: 10px;">
         <h3>Keyboard Controls</h3>
         <ul>
-          <li>Toggle Mode: <strong>Enter</strong></li>
+          <li>Toggle Mode (Edit/Navigate): <strong>Enter</strong></li>
+          <li>New Line: <strong>Shift+Enter</strong></li>
           <li>Indent Line: <strong>Tab</strong></li>
           <li>Unindent Line: <strong>Shift+Tab</strong></li>
           <li>Navigate Cells: <strong>Arrow Keys</strong></li>
-          <li>Save changes: <strong>Cmnd+S / Ctrl+S</strong></li>
         </ul>
       </div>
 
