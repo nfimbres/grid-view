@@ -37,7 +37,7 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
 
   panel.webview.onDidReceiveMessage(async (msg) => {
     if (msg.command === 'save') {
-      const newContent = msg.lines.join('\n');
+      const newContent = msg.lines.join('\n'); // Join lines with newline characters
       const lastFocusedCell = msg.lastFocusedCell; // Capture the last focused cell
       const edit = new vscode.WorkspaceEdit();
       const fullRange = new vscode.Range(
