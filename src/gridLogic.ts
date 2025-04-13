@@ -3,6 +3,7 @@ export function getGridScript(): string {
       const vscode = acquireVsCodeApi();
       const grid = document.getElementById('grid');
       let isEditing = false;
+      let lastFocusedCell = null;
   
       function getCell(row, col) {
         return grid.querySelector(\`td[data-row="\${row}"][data-col="\${col}"]\`);
@@ -155,24 +156,23 @@ export function getGridScript(): string {
       }
   
       function saveGridToVSCode() {
-        const rows = Array.from(grid.querySelectorAll('tr'));
-        const result = [];
-  
-        rows.forEach(tr => {
-          const cells = Array.from(tr.querySelectorAll('td')).filter(c => c.dataset && c.dataset.col);
-          const codeCell = cells.find(c => c.dataset.edit === 'true');
-          if (!codeCell) {
-            result.push('');
-            return;
+        const lines = Array.from(grid.querySelectorAll('tr')).map(row => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          const codeCell = cells.find(cell => cell.dataset.edit === 'true');
+          if (codeCell) {
+            // Preserve indentation by calculating the column index and adding spaces
+            const colIndex = parseInt(codeCell.dataset.col || '0', 10);
+            const indentation = '    '.repeat(colIndex); // 4 spaces per indentation level
+            return indentation + (codeCell.textContent || '').trim(); // Preserve indentation and trim only trailing spaces
           }
-          const indentLevel = parseInt(codeCell.dataset.col);
-          const indent = '    '.repeat(indentLevel);
-          const code = codeCell.textContent.trimEnd();
-          result.push(indent + code);
+          return ''; // Empty line if no code cell is found
         });
-  
-        vscode.postMessage({ command: 'save', lines: result });
-        validateGridContent(); // Trigger validation after saving
+      
+        vscode.postMessage({
+          command: 'save',
+          lines,
+          lastFocusedCell // Include the last focused cell in the save message
+        });
       }
   
       grid.addEventListener('keydown', (e) => {
@@ -191,11 +191,41 @@ export function getGridScript(): string {
   
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (isEditing) {
+          if (e.shiftKey) {
+            // Add a new line below the current row
+            const newRow = document.createElement('tr');
+            const totalCols = grid.querySelectorAll('td[data-row="0"]').length;
+      
+            for (let i = 0; i < totalCols; i++) {
+              const newCell = document.createElement('td');
+              newCell.setAttribute('data-row', row+1);
+              newCell.setAttribute('data-col', i);
+              newCell.setAttribute('tabindex', '0');
+              newCell.setAttribute('data-edit', 'false');
+              newCell.setAttribute('contenteditable', 'false');
+              newCell.textContent = '';
+              newRow.appendChild(newCell);
+            }
+      
+            const rows = Array.from(grid.querySelectorAll('tr'));
+            const currentRow = rows[row];
+            currentRow.insertAdjacentElement('afterend', newRow);
+      
+            // Update row indices for all rows below the new row
+            rows.slice(row + 1).forEach((tr, index) => {
+              const newRowIndex = row + 1 + index;
+              Array.from(tr.querySelectorAll('td')).forEach(td => {
+                td.setAttribute('data-row', newRowIndex);
+              });
+            });
+      
+            validateGridContent();
+          } else if (isEditing) {
             exitEditMode(cell);
           } else if (cell.dataset.edit === 'true') {
             enterEditMode(cell);
           }
+            
           return;
         }
   
@@ -232,6 +262,16 @@ export function getGridScript(): string {
         if (cell.dataset.edit === 'true') enterEditMode(cell);
       });
 
+      grid.addEventListener('focusin', (e) => {
+        const cell = e.target;
+        if (cell && cell.dataset) {
+          lastFocusedCell = {
+            row: cell.dataset.row,
+            col: cell.dataset.col
+          };
+        }
+      });
+
       window.addEventListener('message', event => {
         const message = event.data;
         
@@ -240,13 +280,14 @@ export function getGridScript(): string {
           if (gridBody) gridBody.innerHTML = message.html;
         }
 
-        if (message.command === 'saveComplete') {
+        if (message.command === 'saveComplete' && message.lastFocusedCell) {
           validateGridContent();
 
           // Restore focus to last focused cell if needed
-          const active = document.activeElement;
-          if (active && active.dataset && active.dataset.row && active.dataset.col) {
-            active.focus();
+          const { row, col } = message.lastFocusedCell;
+          const cell = grid.querySelector(\`td[data-row="\${row}"][data-col="\${col}"]\`);
+          if (cell) {
+            cell.focus(); // Restore focus to the last visited cell
           }
         }
 

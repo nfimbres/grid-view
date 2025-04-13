@@ -38,6 +38,7 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
   panel.webview.onDidReceiveMessage(async (msg) => {
     if (msg.command === 'save') {
       const newContent = msg.lines.join('\n');
+      const lastFocusedCell = msg.lastFocusedCell; // Capture the last focused cell
       const edit = new vscode.WorkspaceEdit();
       const fullRange = new vscode.Range(
         currentDoc.positionAt(0),
@@ -47,8 +48,11 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
       await vscode.workspace.applyEdit(edit);
       await currentDoc.save();
     
-      // 👇 Notify the webview that save is done
-      panel.webview.postMessage({ command: 'saveComplete' });
+      // Notify the webview that save is done and restore focus to the last cell
+      panel.webview.postMessage({ 
+        command: 'saveComplete', 
+        lastFocusedCell 
+      });
     }
   });
 }
