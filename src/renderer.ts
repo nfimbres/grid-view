@@ -71,6 +71,10 @@ export function getWebviewContent(lines: string[]): string {
           <li>Unindent Line: <strong>Shift+Tab</strong></li>
           <li>Navigate Cells: <strong>Arrow Keys</strong></li>
         </ul>
+        <h3>Indications</h3>
+        <ul>
+          <li>Red: Missing nested code</li>
+        </ul>
       </div>
 
       <script>${script}</script>

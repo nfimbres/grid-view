@@ -73,10 +73,10 @@ export function getGridScript(): string {
           }
       
           const code = codeCell.textContent.trim();
-          if (code.startsWith('for') || code.startsWith('while')) {
+          if (code.startsWith('for') || code.startsWith('while') || code.startsWith('if') || code.startsWith('def')) {
             const nextRow = rows[rowIndex + 1];
             if (!nextRow) {
-              warnings.push(\`Line \${rowIndex + 1}: Loop has no body.\`);
+              warnings.push(\`Line \${rowIndex + 1}: "\${code.split(' ')[0]}" statement has no body.\`);
               tr.classList.add('problem-row'); // Highlight the problematic row
               return;
             }
@@ -84,13 +84,13 @@ export function getGridScript(): string {
             const nextCells = Array.from(nextRow.querySelectorAll('td')).filter(c => c.dataset && c.dataset.col);
             const nextCodeCell = nextCells.find(c => c.dataset.edit === 'true');
             if (!nextCodeCell || parseInt(nextCodeCell.dataset.col) <= parseInt(codeCell.dataset.col)) {
-              warnings.push(\`Line \${rowIndex + 1}: Loop has no body.\`);
+              warnings.push(\`Line \${rowIndex + 1}: "\${code.split(' ')[0]}" statement has no body.\`);
               tr.classList.add('problem-row'); // Highlight the problematic row
             } else {
               tr.classList.remove('problem-row'); // Remove the class if the issue is resolved
             }
           } else {
-            tr.classList.remove('problem-row'); // Remove the class if the row is not a loop
+            tr.classList.remove('problem-row'); // Remove the class if the row is not a loop, conditional, or function definition
           }
         });
       
