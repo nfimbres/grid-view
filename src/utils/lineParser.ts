@@ -41,6 +41,9 @@ export function buildTableRows(lines: string[], maxCols = 5): string {
         else if (kw === 'if') className = 'yellow';
         else if (kw === 'for') className = 'green';
         else if (kw === 'while') className = 'red';
+      } else {
+        content = ''; // Ensure empty cells are clean
+        className = '';
       }
 
       // Clean, plain empty cells otherwise
