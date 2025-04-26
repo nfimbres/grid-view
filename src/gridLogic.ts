@@ -110,22 +110,46 @@ export function getGridScript(): string {
       const row = parseInt(cell.dataset.row);
       const col = parseInt(cell.dataset.col);
 
-      // Check for a valid parent line above
       let validParentFound = false;
-      let parentConstruct = ''; // Store the parent construct (e.g., "for", "if")
+      let parentConstruct = '';
+      let parentRow = -1;
+
       for (let i = row - 1; i >= 0; i--) {
         const parentCell = getCell(i, col);
-        if (!parentCell || parentCell.dataset.edit !== 'true') continue;
+        if (!parentCell) continue;
 
         const parentCode = parentCell.textContent.trim();
-        if (parentCode.startsWith('for') || parentCode.startsWith('while') || parentCode.startsWith('if') || parentCode.startsWith('def')) {
+
+        // Check if the parent is a valid construct (e.g., for, while, if, def)
+        if (parentCell.dataset.edit === 'true' && (parentCode.startsWith('for') || parentCode.startsWith('while') || parentCode.startsWith('if') || parentCode.startsWith('def'))) {
           validParentFound = true;
-          parentConstruct = parentCode.split(' ')[0]; // Extract the construct (e.g., "for")
+          parentConstruct = parentCode.split(' ')[0];
+          parentRow = i;
+          break;
+        }
+
+        // Check if the parent cell is a "↳within" cell
+        if (parentCell.dataset.edit === 'false' && parentCell.textContent.includes('↳within')) {
+          validParentFound = true;
+          const match = parentCell.textContent.match(/↳within (\\w+) \\(line (\\d+)\\)/);
+          if (match) {
+            parentConstruct = match[1];
+            parentRow = parseInt(match[2]) - 1;
+          }
+          break;
+        }
+
+        // Skip blank lines but continue searching for a valid parent
+        if (parentCell.dataset.edit !== 'true' && parentCode.trim() === '') {
+          continue;
+        }
+
+        // Stop if a new construct is encountered, indicating the end of the current nested structure
+        if (parentCell.dataset.edit === 'true' && (parentCode.startsWith('for') || parentCode.startsWith('while') || parentCode.startsWith('if') || parentCode.startsWith('def'))) {
           break;
         }
       }
 
-      // If no valid parent is found, prevent indentation
       if (!validParentFound) {
         console.warn('Cannot indent: No valid parent line found above.');
         return;
@@ -140,7 +164,7 @@ export function getGridScript(): string {
       nextCell.contentEditable = 'false';
       nextCell.focus();
 
-      cell.innerHTML = \`↳within \${parentConstruct}\`; // Display the parent construct
+      cell.innerHTML = \`↳within \${parentConstruct} (line \${parentRow + 1})\`;
       cell.dataset.edit = 'false';
       cell.contentEditable = 'false';
 
