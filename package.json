@@ -17,7 +17,7 @@
         "title": "Grid Extension"
       }
     ]
-},
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -29,7 +29,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.11",
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.99.1",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.25.0",
     "@vscode/test-cli": "^0.0.10",

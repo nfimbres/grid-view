@@ -1,13 +1,18 @@
 export function getGridScript(): string {
   return `
+    // Acquire the VS Code API for communication between the webview and the extension
     const vscode = acquireVsCodeApi();
-    const grid = document.getElementById('grid');
-    let isEditing = false;
-    let lastFocusedCell = null;
 
+    // Get the grid element from the DOM
+    const grid = document.getElementById('grid');
+    let isEditing = false; // Tracks whether a cell is in edit mode
+    let lastFocusedCell = null; // Tracks the last focused cell for saving state
+
+    // History stacks for undo/redo functionality
     let history = [];
     let redoStack = [];
 
+    // Push the current grid state to the history stack
     function pushToHistory() {
       const snapshot = Array.from(grid.querySelectorAll('tr')).map(tr =>
         Array.from(tr.querySelectorAll('td')).map(td => td.innerHTML)
@@ -16,6 +21,7 @@ export function getGridScript(): string {
       redoStack = []; // Clear redo stack on new action
     }
 
+    // Restore the grid state from a snapshot
     function restoreFromSnapshot(snapshot) {
       const rows = grid.querySelectorAll('tr');
       snapshot.forEach((rowData, rowIndex) => {
@@ -26,13 +32,15 @@ export function getGridScript(): string {
           });
         }
       });
-      validateGridContent();
+      validateGridContent(); // Validate the grid after restoring
     }
 
+    // Get a specific cell by row and column
     function getCell(row, col) {
       return grid.querySelector(\`td[data-row="\${row}"][data-col="\${col}"]\`);
     }
 
+    // Place the caret at the end of a cell's content
     function placeCaretAtEnd(el) {
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -42,6 +50,7 @@ export function getGridScript(): string {
       sel.addRange(range);
     }
 
+    // Enter edit mode for a cell
     function enterEditMode(cell) {
       isEditing = true;
       cell.contentEditable = 'true';
@@ -49,14 +58,16 @@ export function getGridScript(): string {
       placeCaretAtEnd(cell);
     }
 
+    // Exit edit mode for a cell
     function exitEditMode(cell) {
       isEditing = false;
       cell.contentEditable = 'false';
       cell.focus();
-      pushToHistory();
-      validateGridContent();
+      pushToHistory(); // Save the current state to history
+      validateGridContent(); // Validate the grid content
     }
 
+    // Find the parent keyword (e.g., 'def', 'if') for a given row
     function findParentKeyword(row) {
       for (let i = row - 1; i >= 0; i--) {
         const cells = grid.querySelectorAll(\`td[data-row="\${i}"]\`);
@@ -71,6 +82,7 @@ export function getGridScript(): string {
       return null;
     }
 
+    // Get the maximum column used in a specific row
     function getMaxColUsedInRow(row) {
       const cells = grid.querySelectorAll(\`td[data-row="\${row}"]\`);
       let max = 0;
@@ -84,6 +96,7 @@ export function getGridScript(): string {
       return max;
     }
 
+    // Validate the grid content for logical issues
     function validateGridContent() {
       const rows = Array.from(grid.querySelectorAll('tr'));
       const warnings = [];
@@ -123,6 +136,7 @@ export function getGridScript(): string {
       }
     }
 
+    // Shift a cell's content to the right
     function shiftCellRight(cell) {
       if (cell.dataset.edit !== 'true') return;
       pushToHistory();
@@ -152,6 +166,7 @@ export function getGridScript(): string {
       validateGridContent();
     }
 
+    // Shift a cell's content to the left
     function shiftCellLeft(cell) {
       if (cell.dataset.edit !== 'true') return;
       pushToHistory();
@@ -179,6 +194,7 @@ export function getGridScript(): string {
       validateGridContent();
     }
 
+    // Save the grid content to VS Code
     function saveGridToVSCode() {
       const lines = Array.from(grid.querySelectorAll('tr')).map(row => {
         const cells = Array.from(row.querySelectorAll('td'));
@@ -198,6 +214,7 @@ export function getGridScript(): string {
       });
     }
 
+    // Event listener for keydown events on the grid
     grid.addEventListener('keydown', (e) => {
       const cell = document.activeElement;
       if (!cell.dataset) return;
@@ -206,6 +223,7 @@ export function getGridScript(): string {
       const col = parseInt(cell.dataset.col);
       let next;
 
+      // Handle delete/backspace with meta/ctrl/shift keys
       if ((e.metaKey || e.ctrlKey || e.shiftKey) && (e.key === 'Delete' || e.key === 'Backspace')) {
         e.preventDefault();
         const rowElement = grid.querySelector(\`tr:nth-child(\${row + 1})\`);
@@ -225,6 +243,7 @@ export function getGridScript(): string {
         return;
       }
 
+      // Handle undo/redo with ctrl/meta + z
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey && redoStack.length > 0) {
@@ -246,6 +265,7 @@ export function getGridScript(): string {
         return;
       }
 
+      // Handle Enter key for editing or adding rows
       if (e.key === 'Enter') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -285,6 +305,7 @@ export function getGridScript(): string {
         return;
       }
 
+      // Handle Tab key for shifting cells
       if (!isEditing && e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault();
         shiftCellRight(cell);
@@ -301,6 +322,7 @@ export function getGridScript(): string {
 
       if (isEditing) return;
 
+      // Handle arrow keys for navigation
       switch (e.key) {
         case 'ArrowDown': next = getCell(row + 1, col); break;
         case 'ArrowUp': next = getCell(row - 1, col); break;
@@ -314,12 +336,14 @@ export function getGridScript(): string {
       }
     });
 
+    // Event listener for click events on the grid
     grid.addEventListener('click', (e) => {
       const cell = e.target;
       if (!cell.dataset || cell.classList.contains('line-number')) return;
       if (cell.dataset.edit === 'true') enterEditMode(cell);
     });
 
+    // Event listener for focus events on the grid
     grid.addEventListener('focusin', (e) => {
       const cell = e.target;
       if (cell && cell.dataset) {
@@ -330,6 +354,7 @@ export function getGridScript(): string {
       }
     });
 
+    // Handle messages from the VS Code extension
     window.addEventListener('message', event => {
       const message = event.data;
       if (message.command === 'refreshGrid') {
