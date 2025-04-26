@@ -258,7 +258,7 @@ export function getGridScript(): string {
         return;
       }
 
-      if (!isEditing && e.key === 'Tab') {
+      if (e.key === 'Tab') {
         e.preventDefault();
         if (e.shiftKey) {
           shiftCellLeft(cell);
@@ -266,6 +266,40 @@ export function getGridScript(): string {
           shiftCellRight(cell);
         }
         saveGridToVSCode();
+        return;
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && e.shiftKey) {
+        e.preventDefault();
+        console.log('Shift+Delete or Shift+Backspace detected, attempting to delete row.');
+        const rows = Array.from(grid.querySelectorAll('tr'));
+        const currentRow = rows[row];
+        if (currentRow) {
+          console.log(\`Deleting row: \${row}\`);
+          const previousRow = rows[row - 1];
+          currentRow.remove();
+
+          // Update the data-row attributes for all rows below the deleted one
+          rows.slice(row + 1).forEach((tr, index) => {
+            const newRowIndex = row + index;
+            Array.from(tr.querySelectorAll('td')).forEach(td => {
+              td.setAttribute('data-row', newRowIndex);
+            });
+          });
+
+          validateGridContent();
+          saveGridToVSCode();
+
+          // Focus on the cell above if it exists
+          if (previousRow) {
+            const cellAbove = previousRow.querySelector(\`td[data-col="\${col}"]\`);
+            if (cellAbove) {
+              cellAbove.focus();
+            }
+          }
+        } else {
+          console.warn('No row found to delete.');
+        }
         return;
       }
 
