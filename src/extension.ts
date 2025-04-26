@@ -1,25 +1,32 @@
-// Import the VS Code API and custom functions from the gridPanel module
 import * as vscode from 'vscode';
-import { openGridPanel, updateGridFromFile } from './gridPanel';
+import { openGridPanel, updateGridFromFile, currentDoc } from './gridPanel';
 
-// This function is called when the extension is activated
 export function activate(context: vscode.ExtensionContext) {
   // Register a command that opens the grid view in a split panel
   const disposable = vscode.commands.registerCommand('grid-view.openSplitView', async () => {
-    // Call the function to open the grid panel
     await openGridPanel(context);
   });
 
-  // Add the command to the extension's subscriptions for cleanup on deactivation
   context.subscriptions.push(disposable);
 
   // Listen for text document save events in the workspace
   vscode.workspace.onDidSaveTextDocument((doc) => {
-    // Update the grid view with the content of the saved document
-    updateGridFromFile(doc.getText());
+    if (doc === currentDoc) {
+      console.log('File saved:', doc.uri.toString());
+      const newText = doc.getText();
+      updateGridFromFile(newText, doc);
+    }
+  });
+
+  // Listen for text document change events in the workspace
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document === currentDoc) {
+      console.log('Document changed:', event.document.uri.toString());
+      const newText = event.document.getText();
+      updateGridFromFile(newText, event.document);
+    }
   });
 }
 
-// This function is called when the extension is deactivated
 export function deactivate() {}
 

@@ -1,46 +1,47 @@
 export function getGridScript(): string {
   return `
-    // Acquire the VS Code API for communication between the webview and the extension
     const vscode = acquireVsCodeApi();
-
-    // Get the grid element from the DOM
     const grid = document.getElementById('grid');
-    let isEditing = false; // Tracks whether a cell is in edit mode
-    let lastFocusedCell = null; // Tracks the last focused cell for saving state
+    let isEditing = false;
+    let lastFocusedCell = null;
 
-    // History stacks for undo/redo functionality
-    let history = [];
-    let redoStack = [];
-
-    // Push the current grid state to the history stack
     function pushToHistory() {
-      const snapshot = Array.from(grid.querySelectorAll('tr')).map(tr =>
-        Array.from(tr.querySelectorAll('td')).map(td => td.innerHTML)
-      );
-      history.push(snapshot);
-      redoStack = []; // Clear redo stack on new action
+      // This function is no longer needed since undo functionality is removed.
     }
 
-    // Restore the grid state from a snapshot
     function restoreFromSnapshot(snapshot) {
       const rows = grid.querySelectorAll('tr');
-      snapshot.forEach((rowData, rowIndex) => {
+      snapshot.forEach((line, rowIndex) => {
         const cells = rows[rowIndex]?.querySelectorAll('td');
         if (cells) {
-          rowData.forEach((html, colIndex) => {
-            if (cells[colIndex]) cells[colIndex].innerHTML = html;
+          const indentationLevel = (line.match(/^\\s*/) || [''])[0].length / 4;
+          const code = line.trim();
+          cells.forEach((cell, colIndex) => {
+            if (colIndex === indentationLevel) {
+              cell.textContent = code;
+              cell.dataset.edit = 'true';
+            } else {
+              cell.textContent = '';
+              cell.dataset.edit = 'false';
+            }
           });
         }
       });
-      validateGridContent(); // Validate the grid after restoring
+
+      validateGridContent(); // Ensure the grid content is validated after restoring
+
+      // Send the updated code back to VS Code
+      vscode.postMessage({
+        command: 'save',
+        lines: snapshot,
+        lastFocusedCell
+      });
     }
 
-    // Get a specific cell by row and column
     function getCell(row, col) {
       return grid.querySelector(\`td[data-row="\${row}"][data-col="\${col}"]\`);
     }
 
-    // Place the caret at the end of a cell's content
     function placeCaretAtEnd(el) {
       const range = document.createRange();
       range.selectNodeContents(el);
@@ -50,7 +51,6 @@ export function getGridScript(): string {
       sel.addRange(range);
     }
 
-    // Enter edit mode for a cell
     function enterEditMode(cell) {
       isEditing = true;
       cell.contentEditable = 'true';
@@ -58,45 +58,13 @@ export function getGridScript(): string {
       placeCaretAtEnd(cell);
     }
 
-    // Exit edit mode for a cell
     function exitEditMode(cell) {
       isEditing = false;
       cell.contentEditable = 'false';
       cell.focus();
-      pushToHistory(); // Save the current state to history
-      validateGridContent(); // Validate the grid content
+      validateGridContent();
     }
 
-    // Find the parent keyword (e.g., 'def', 'if') for a given row
-    function findParentKeyword(row) {
-      for (let i = row - 1; i >= 0; i--) {
-        const cells = grid.querySelectorAll(\`td[data-row="\${i}"]\`);
-        for (let td of cells) {
-          const text = td.textContent;
-          if (text.includes('def')) return 'def';
-          if (text.includes('if')) return 'if';
-          if (text.includes('for')) return 'for';
-          if (text.includes('while')) return 'while';
-        }
-      }
-      return null;
-    }
-
-    // Get the maximum column used in a specific row
-    function getMaxColUsedInRow(row) {
-      const cells = grid.querySelectorAll(\`td[data-row="\${row}"]\`);
-      let max = 0;
-      for (let td of cells) {
-        const content = td.textContent.trim();
-        if (td.dataset.col && content !== '') {
-          const col = parseInt(td.dataset.col);
-          if (!isNaN(col)) max = Math.max(max, col);
-        }
-      }
-      return max;
-    }
-
-    // Validate the grid content for logical issues
     function validateGridContent() {
       const rows = Array.from(grid.querySelectorAll('tr'));
       const warnings = [];
@@ -136,40 +104,51 @@ export function getGridScript(): string {
       }
     }
 
-    // Shift a cell's content to the right
     function shiftCellRight(cell) {
       if (cell.dataset.edit !== 'true') return;
-      pushToHistory();
 
       const row = parseInt(cell.dataset.row);
       const col = parseInt(cell.dataset.col);
+
+      // Check for a valid parent line above
+      let validParentFound = false;
+      let parentConstruct = ''; // Store the parent construct (e.g., "for", "if")
+      for (let i = row - 1; i >= 0; i--) {
+        const parentCell = getCell(i, col);
+        if (!parentCell || parentCell.dataset.edit !== 'true') continue;
+
+        const parentCode = parentCell.textContent.trim();
+        if (parentCode.startsWith('for') || parentCode.startsWith('while') || parentCode.startsWith('if') || parentCode.startsWith('def')) {
+          validParentFound = true;
+          parentConstruct = parentCode.split(' ')[0]; // Extract the construct (e.g., "for")
+          break;
+        }
+      }
+
+      // If no valid parent is found, prevent indentation
+      if (!validParentFound) {
+        console.warn('Cannot indent: No valid parent line found above.');
+        return;
+      }
+
       const nextCol = col + 1;
-
-      const maxAllowedCol = getMaxColUsedInRow(row - 1);
-      if (nextCol > maxAllowedCol + 1) return;
-
       const nextCell = getCell(row, nextCol);
       if (!nextCell) return;
 
       nextCell.textContent = cell.textContent;
       nextCell.dataset.edit = 'true';
       nextCell.contentEditable = 'false';
-      nextCell.className = '';
       nextCell.focus();
 
-      const context = findParentKeyword(row);
-      cell.innerHTML = context ? \`↳within <em>\${context}</em>\` : '';
-      cell.className = context === 'def' ? 'blue' : context === 'if' ? 'yellow' : context === 'for' ? 'green' : context === 'while' ? 'red' : '';
+      cell.innerHTML = \`↳within \${parentConstruct}\`; // Display the parent construct
       cell.dataset.edit = 'false';
       cell.contentEditable = 'false';
 
       validateGridContent();
     }
 
-    // Shift a cell's content to the left
     function shiftCellLeft(cell) {
       if (cell.dataset.edit !== 'true') return;
-      pushToHistory();
 
       const row = parseInt(cell.dataset.row);
       const col = parseInt(cell.dataset.col);
@@ -178,23 +157,18 @@ export function getGridScript(): string {
       const prevCell = getCell(row, col - 1);
       if (!prevCell) return;
 
-      const content = cell.textContent;
-
-      prevCell.textContent = content;
+      prevCell.textContent = cell.textContent;
       prevCell.dataset.edit = 'true';
       prevCell.contentEditable = 'false';
-      prevCell.className = '';
       prevCell.focus();
 
       cell.innerHTML = '';
-      cell.className = '';
       cell.dataset.edit = 'false';
       cell.contentEditable = 'false';
 
       validateGridContent();
     }
 
-    // Save the grid content to VS Code
     function saveGridToVSCode() {
       const lines = Array.from(grid.querySelectorAll('tr')).map(row => {
         const cells = Array.from(row.querySelectorAll('td'));
@@ -207,6 +181,7 @@ export function getGridScript(): string {
         return '';
       });
 
+      console.log('Sending save message to VS Code with lines:', lines);
       vscode.postMessage({
         command: 'save',
         lines,
@@ -214,58 +189,13 @@ export function getGridScript(): string {
       });
     }
 
-    // Event listener for keydown events on the grid
-    grid.addEventListener('keydown', (e) => {
+    function processKeyboardShortcut(e) {
       const cell = document.activeElement;
-      if (!cell.dataset) return;
+      if (!cell || !cell.dataset) return;
 
       const row = parseInt(cell.dataset.row);
       const col = parseInt(cell.dataset.col);
-      let next;
 
-      // Handle delete/backspace with meta/ctrl/shift keys
-      if ((e.metaKey || e.ctrlKey || e.shiftKey) && (e.key === 'Delete' || e.key === 'Backspace')) {
-        e.preventDefault();
-        const rowElement = grid.querySelector(\`tr:nth-child(\${row + 1})\`);
-        if (rowElement) {
-          pushToHistory();
-          rowElement.remove();
-
-          const rows = Array.from(grid.querySelectorAll('tr'));
-          rows.forEach((tr, rIdx) => {
-            Array.from(tr.querySelectorAll('td')).forEach(td => {
-              td.setAttribute('data-row', rIdx.toString());
-            });
-          });
-
-          saveGridToVSCode();
-        }
-        return;
-      }
-
-      // Handle undo/redo with ctrl/meta + z
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey && redoStack.length > 0) {
-          const redo = redoStack.pop();
-          if (redo) {
-            pushToHistory();
-            restoreFromSnapshot(redo);
-          }
-        } else if (history.length > 0) {
-          const undo = history.pop();
-          if (undo) {
-            const currentSnapshot = Array.from(grid.querySelectorAll('tr')).map(tr =>
-              Array.from(tr.querySelectorAll('td')).map(td => td.innerHTML)
-            );
-            redoStack.push(currentSnapshot);
-            restoreFromSnapshot(undo);
-          }
-        }
-        return;
-      }
-
-      // Handle Enter key for editing or adding rows
       if (e.key === 'Enter') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -293,7 +223,6 @@ export function getGridScript(): string {
             });
           });
 
-          pushToHistory();
           validateGridContent();
           saveGridToVSCode();
         } else if (isEditing) {
@@ -305,24 +234,20 @@ export function getGridScript(): string {
         return;
       }
 
-      // Handle Tab key for shifting cells
-      if (!isEditing && e.key === 'Tab' && !e.shiftKey) {
+      if (!isEditing && e.key === 'Tab') {
         e.preventDefault();
-        shiftCellRight(cell);
-        saveGridToVSCode();
-        return;
-      }
-
-      if (!isEditing && e.key === 'Tab' && e.shiftKey) {
-        e.preventDefault();
-        shiftCellLeft(cell);
+        if (e.shiftKey) {
+          shiftCellLeft(cell);
+        } else {
+          shiftCellRight(cell);
+        }
         saveGridToVSCode();
         return;
       }
 
       if (isEditing) return;
 
-      // Handle arrow keys for navigation
+      let next;
       switch (e.key) {
         case 'ArrowDown': next = getCell(row + 1, col); break;
         case 'ArrowUp': next = getCell(row - 1, col); break;
@@ -334,16 +259,16 @@ export function getGridScript(): string {
         e.preventDefault();
         next.focus();
       }
-    });
+    }
 
-    // Event listener for click events on the grid
+    grid.addEventListener('keydown', processKeyboardShortcut);
+
     grid.addEventListener('click', (e) => {
       const cell = e.target;
       if (!cell.dataset || cell.classList.contains('line-number')) return;
       if (cell.dataset.edit === 'true') enterEditMode(cell);
     });
 
-    // Event listener for focus events on the grid
     grid.addEventListener('focusin', (e) => {
       const cell = e.target;
       if (cell && cell.dataset) {
@@ -354,23 +279,35 @@ export function getGridScript(): string {
       }
     });
 
-    // Handle messages from the VS Code extension
     window.addEventListener('message', event => {
       const message = event.data;
+      console.log('Message received in webview:', message);
+
       if (message.command === 'refreshGrid') {
         const gridBody = document.getElementById('grid-body');
-        if (gridBody) gridBody.innerHTML = message.html;
+        if (gridBody) {
+          // Save the currently focused cell's position
+          const focusedCell = document.activeElement;
+          const focusedRow = focusedCell?.dataset?.row;
+          const focusedCol = focusedCell?.dataset?.col;
+
+          // Update the grid with the new HTML
+          gridBody.innerHTML = message.html;
+
+          // Restore focus to the previously focused cell
+          if (focusedRow !== undefined && focusedCol !== undefined) {
+            const cellToFocus = grid.querySelector(\`td[data-row="\${focusedRow}"][data-col="\${focusedCol}"]\`);
+            if (cellToFocus) {
+              cellToFocus.focus();
+            }
+          }
+        }
+
+        validateGridContent(); // Revalidate the grid content
       }
 
-      if (message.command === 'saveComplete' && message.lastFocusedCell) {
-        validateGridContent();
-        const { row, col } = message.lastFocusedCell;
-        const cell = grid.querySelector(\`td[data-row="\${row}"][data-col="\${col}"]\`);
-        if (cell) cell.focus();
-      }
-
-      if (message.command === 'validateGridContent') {
-        validateGridContent();
+      if (message.command === 'validateGrid') {
+        validateGridContent(); // Revalidate the grid content
       }
     });
   `;

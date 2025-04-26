@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { getWebviewContent } from './renderer';
 import { buildTableFromText } from './utils/lineParser';
 
-let currentDoc: vscode.TextDocument; // Stores the currently opened document
+export let currentDoc: vscode.TextDocument; // Export currentDoc
 let panel: vscode.WebviewPanel; // Stores the webview panel instance
 
 // Function to open the grid panel and display the grid view
@@ -13,6 +13,7 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
 
   // Open the selected file as a text document
   currentDoc = await vscode.workspace.openTextDocument(uris[0]);
+  console.log('Current document set to:', currentDoc.uri.toString());
   const editor = await vscode.window.showTextDocument(currentDoc, vscode.ViewColumn.One);
 
   // Enable line numbers in the editor
@@ -69,14 +70,19 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
 }
 
 // Function to update the grid view when the file content changes
-export function updateGridFromFile(newText: string) {
-  // Convert the new text content into an HTML table
-  const newTableHTML = buildTableFromText(newText);
-  if (panel) {
-    // Send a message to the webview to refresh the grid with the new HTML
-    panel.webview.postMessage({
-      command: 'refreshGrid',
-      html: newTableHTML
-    });
+export function updateGridFromFile(newText: string, doc: vscode.TextDocument) {
+  if (doc === currentDoc) {
+    const newTableHTML = buildTableFromText(newText);
+    if (panel) {
+      console.log('Sending refreshGrid message to webview');
+      panel.webview.postMessage({
+        command: 'refreshGrid',
+        html: newTableHTML
+      });
+
+      panel.webview.postMessage({
+        command: 'validateGrid'
+      });
+    }
   }
 }
