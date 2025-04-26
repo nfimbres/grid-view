@@ -55,10 +55,10 @@ export function buildTableRows(lines: string[], maxCols = 5): string {
         const kw = currentKeywords[col];
         content = `↳within <em>${escapeHtml(kw)}</em>`; // Show the keyword context
         // Assign a color class based on the keyword type
-        if (kw === 'def') className = 'blue';
-        else if (kw === 'if') className = 'yellow';
-        else if (kw === 'for') className = 'green';
-        else if (kw === 'while') className = 'red';
+        if (kw === 'def') {className = 'blue';}
+        else if (kw === 'if') {className = 'yellow';}
+        else if (kw === 'for') {className = 'green';}
+        else if (kw === 'while') {className = 'red';}
       } else {
         // Ensure empty cells are clean
         content = '';
