@@ -331,39 +331,43 @@ export function getGridScript(): string {
       const cell = e.target;
       if (cell && cell.dataset) {
         lastFocusedCell = {
-          row: cell.dataset.row,
-          col: cell.dataset.col
+          row: cell.dataset.row, // Save the row index of the last focused cell
+          col: cell.dataset.col  // Save the column index of the last focused cell
         };
       }
     });
 
+    // Listen for messages sent to the webview
     window.addEventListener('message', event => {
-      const message = event.data;
+      const message = event.data; // Extract the message data from the event
       console.log('Message received in webview:', message);
 
+      // Handle the 'refreshGrid' command to update the grid content
       if (message.command === 'refreshGrid') {
-        const gridBody = document.getElementById('grid-body');
+        const gridBody = document.getElementById('grid-body'); // Get the grid body element
         if (gridBody) {
           // Save the currently focused cell's position
-          const focusedCell = document.activeElement;
-          const focusedRow = focusedCell?.dataset?.row;
-          const focusedCol = focusedCell?.dataset?.col;
+          const focusedCell = document.activeElement; // Get the currently focused element
+          const focusedRow = focusedCell?.dataset?.row; // Row index of the focused cell
+          const focusedCol = focusedCell?.dataset?.col; // Column index of the focused cell
 
-          // Update the grid with the new HTML
-          gridBody.innerHTML = message.html;
+          // Update the grid with the new HTML content
+          gridBody.innerHTML = message.html; // Replace the grid's content with the new HTML
 
-          // Restore focus to the previously focused cell
+          // Restore focus to the previously focused cell after the grid is updated
           if (focusedRow !== undefined && focusedCol !== undefined) {
             const cellToFocus = grid.querySelector(\`td[data-row="\${focusedRow}"][data-col="\${focusedCol}"]\`);
             if (cellToFocus) {
-              cellToFocus.focus();
+              cellToFocus.focus(); // Set focus back to the previously focused cell
             }
           }
         }
 
-        validateGridContent(); // Revalidate the grid content
+        // Revalidate the grid content to ensure consistency
+        validateGridContent(); // Call the function to validate the grid's content
       }
 
+      // Handle the 'validateGrid' command to manually trigger grid validation
       if (message.command === 'validateGrid') {
         validateGridContent(); // Revalidate the grid content
       }

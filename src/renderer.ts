@@ -84,22 +84,6 @@ export function getWebviewContent(lines: string[]): string {
       <!-- Table for displaying the grid -->
       <table id="grid"><tbody id="grid-body">${tableRows}</tbody></table>
 
-      <!-- Controls section for keyboard shortcuts and indications -->
-      <div id="controls" style="justify-content: center; padding: 10px;">
-        <h3>Keyboard Controls</h3>
-        <ul>
-          <li>Toggle Mode (Edit/Navigate): <strong>Enter</strong></li>
-          <li>New Line: <strong>Shift+Enter</strong></li>
-          <li>Indent Line: <strong>Tab</strong></li>
-          <li>Unindent Line: <strong>Shift+Tab</strong></li>
-          <li>Navigate Cells: <strong>Arrow Keys</strong></li>
-        </ul>
-        <h3>Indications</h3>
-        <ul>
-          <li>Red: Missing nested code</li>
-        </ul>
-      </div>
-
       <!-- JavaScript logic for the grid -->
       <script>${script}</script>
 
