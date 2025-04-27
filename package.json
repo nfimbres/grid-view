@@ -39,5 +39,9 @@
   },
   "dependencies": {
     "monaco-editor": "^0.52.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nfimbres/grid-view.git"
   }
 }
