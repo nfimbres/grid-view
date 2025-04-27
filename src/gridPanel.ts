@@ -9,9 +9,7 @@ let panel: vscode.WebviewPanel; // Stores the webview panel instance
 export async function openGridPanel(context: vscode.ExtensionContext) {
   // Show a file open dialog to select a file
   const uris = await vscode.window.showOpenDialog({ canSelectMany: false });
-  if (!uris || uris.length === 0) { 
-    return; // Exit if no file is selected
-  }
+  if (!uris || uris.length === 0) {return;} // Exit if no file is selected
   // Open the selected file as a text document
   currentDoc = await vscode.workspace.openTextDocument(uris[0]);
   console.log('Current document set to:', currentDoc.uri.toString());
@@ -63,7 +61,7 @@ export async function openGridPanel(context: vscode.ExtensionContext) {
 
       // Notify the webview that the save is complete and restore focus to the last cell
       panel.webview.postMessage({ 
-        command: 'saveComplete', 
+        command: 'saveComplete',
         lastFocusedCell 
       });
     }
