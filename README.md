@@ -50,7 +50,3 @@ Once released to the Visual Studio Code Marketplace:
 University of Mary Washington  
 Fredericksburg, Virginia, USA  
 nfimbres@mail.umw.edu
-
----
-
-> Making code more accessible for everyone, one block at a time.
